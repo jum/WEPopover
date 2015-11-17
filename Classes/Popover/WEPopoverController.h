@@ -20,7 +20,15 @@
 - (BOOL)popoverControllerShouldDismissPopover:(WEPopoverController *)popoverController;
 - (void)popoverController:(WEPopoverController *)popoverController willRepositionPopoverToRect:(inout CGRect *)rect inView:(inout UIView **)view;
 
+//If implemented restricts the popover to the specified area within the specified parentView (by default the parent view is the top most UIView in the view hierarchy).
+- (CGRect)displayAreayForPoverController:(WEPopoverController *)popoverController relativeToView:(UIView *)parentView;
+
 @end
+
+typedef NS_ENUM(NSUInteger, WEPopoverAnimationType) {
+    WEPopoverAnimationTypeCrossFade = 0,
+    WEPopoverAnimationTypeSlide = 1
+};
 
 /**
  * Popover controller for the iPhone, mimicing the iPad UIPopoverController interface. See that class for more details.
@@ -41,8 +49,18 @@
 @property (nonatomic, assign) CGSize popoverContentSize;
 @property (nonatomic, strong) WEPopoverContainerViewProperties *containerViewProperties;
 @property (nonatomic, strong) id <NSObject> context;
+
+//If set: this view is used as parent view for the popover.
+//The background color is applied as overlay to this view. By default this is the first subview of the window.
 @property (nonatomic, weak) UIView *parentView;
+
 @property (nonatomic, copy) NSArray *passthroughViews;
+
+//Default is WEPopoverAnimationTypeCrossFade
+@property (nonatomic, assign) WEPopoverAnimationType animationType;
+
+//Default is .3 seconds
+@property (nonatomic, assign) NSTimeInterval animationDuration;
 
 @property(nonatomic, assign) UIEdgeInsets popoverLayoutMargins;
 
