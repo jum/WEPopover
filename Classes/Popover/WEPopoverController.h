@@ -21,7 +21,11 @@
 - (void)popoverController:(WEPopoverController *)popoverController willRepositionPopoverToRect:(inout CGRect *)rect inView:(inout UIView **)view;
 
 //If implemented restricts the popover to the specified area within the specified parentView (by default the parent view is the top most UIView in the view hierarchy).
-- (CGRect)displayAreayForPoverController:(WEPopoverController *)popoverController relativeToView:(UIView *)parentView;
+//The popoverLayoutMargins are applied on top of this display area
+- (CGRect)displayAreaForPopoverController:(WEPopoverController *)popoverController relativeToView:(UIView *)parentView;
+
+//If implemented restricts the area that is tinted with the background color. Defaults to the whole parentview.
+- (CGRect)backgroundAreaForPopoverController:(WEPopoverController *)popoverController relativeToView:(UIView *)parentView;
 
 @end
 
@@ -29,6 +33,8 @@ typedef NS_ENUM(NSUInteger, WEPopoverAnimationType) {
     WEPopoverAnimationTypeCrossFade = 0,
     WEPopoverAnimationTypeSlide = 1
 };
+
+typedef void(^WEPopoverCompletionBlock)(void);
 
 /**
  * Popover controller for the iPhone, mimicing the iPad UIPopoverController interface. See that class for more details.
@@ -88,5 +94,25 @@ typedef NS_ENUM(NSUInteger, WEPopoverAnimationType) {
 						   inView:(UIView *)view
 		 permittedArrowDirections:(UIPopoverArrowDirection)arrowDirections
                          animated:(BOOL)animated;
+
+
+- (void)dismissPopoverAnimated:(BOOL)animated completion:(WEPopoverCompletionBlock)completion;
+
+- (void)presentPopoverFromBarButtonItem:(UIBarButtonItem *)item
+               permittedArrowDirections:(UIPopoverArrowDirection)arrowDirections
+                               animated:(BOOL)animated
+                             completion:(WEPopoverCompletionBlock)completion;;
+
+- (void)presentPopoverFromRect:(CGRect)rect
+                        inView:(UIView *)view
+      permittedArrowDirections:(UIPopoverArrowDirection)arrowDirections
+                      animated:(BOOL)animated
+                    completion:(WEPopoverCompletionBlock)completion;;
+
+- (void)repositionPopoverFromRect:(CGRect)rect
+                           inView:(UIView *)view
+         permittedArrowDirections:(UIPopoverArrowDirection)arrowDirections
+                         animated:(BOOL)animated
+                       completion:(WEPopoverCompletionBlock)completion;;
 
 @end
