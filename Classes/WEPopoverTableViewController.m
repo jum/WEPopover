@@ -8,6 +8,7 @@
 
 #import "WEPopoverTableViewController.h"
 #import "WEPopoverContentViewController.h"
+#import "WEPopoverViewController.h"
 #import "UIBarButtonItem+WEPopover.h"
 
 @implementation WEPopoverTableViewController
@@ -42,6 +43,8 @@
     // self.navigationItem.rightBarButtonItem = self.editButtonItem;
 	
 	currentPopoverCellIndex = -1;
+    
+    self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:@"Show modal" style:UIBarButtonItemStyleBordered target:self action:@selector(showModal:)];
 }
 
 /*
@@ -212,6 +215,8 @@
                 [self.popoverController setContainerViewProperties:[self improvedContainerViewProperties]];
             }
             
+            self.popoverController.backgroundColor = [UIColor colorWithWhite:0.0 alpha:0.3];
+            
             self.popoverController.delegate = self;
             
             //Uncomment the line below to allow the table view to handle events while the popover is displayed.
@@ -248,12 +253,18 @@
 #pragma mark -
 #pragma mark Actions
 
+- (IBAction)showModal:(id)sender {
+    WEPopoverViewController *vc = [WEPopoverViewController new];
+    [self presentViewController:vc animated:YES completion:nil];
+}
+
 - (IBAction)showPopover:(id)sender {
 	
 	if (!self.popoverController) {
 		
 		UIViewController *contentViewController = [[WEPopoverContentViewController alloc] initWithStyle:UITableViewStylePlain];
 		self.popoverController = [[popoverClass alloc] initWithContentViewController:contentViewController];
+        self.popoverController.backgroundColor = [UIColor colorWithWhite:0.0 alpha:0.3];
 		self.popoverController.delegate = self;
 		self.popoverController.passthroughViews = [NSArray arrayWithObject:self.navigationController.navigationBar];
 		

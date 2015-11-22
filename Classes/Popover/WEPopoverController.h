@@ -11,6 +11,12 @@
 #import "WEPopoverContainerViewProperties.h"
 #import "WETouchableView.h"
 
+/**
+ Notifications for showing/dismissing.
+ */
+extern NSString * const WEPopoverControllerWillShowNotification;
+extern NSString * const WEPopoverControllerDidDismissNotification;
+
 @class WEPopoverController;
 
 /**
@@ -22,7 +28,7 @@
 /**
  Called when the popover is dismissed by the user.
  
- Not called when the popover is dismissed manually.
+ Not called when the popover is dismissed manually (by using any of the dismissPopover methods).
  */
 - (void)popoverControllerDidDismissPopover:(WEPopoverController *)popoverController;
 
@@ -51,6 +57,17 @@
  */
 - (CGRect)backgroundAreaForPopoverController:(WEPopoverController *)popoverController relativeToView:(UIView *)parentView;
 
+/**
+ If implemented uses this view for the background tint area when the popover is active.
+ 
+ The frame of this view is set automatically to the parentView.bounds or (if implemented) to the frame returned by
+ 
+ backgroundAreaForPopoverController:relativeToView:
+ 
+ The view defaults to a normal UIView with the backgroundColor applied to it. You may override this for example to use a UIVisualEffectView (iOS 8).
+ */
+- (UIView *)backgroundViewForPopoverController:(WEPopoverController *)popoverController;
+
 @end
 
 /**
@@ -61,7 +78,22 @@ typedef NS_ENUM(NSUInteger, WEPopoverAnimationType) {
     WEPopoverAnimationTypeSlide = 1
 };
 
+typedef NS_ENUM(NSUInteger, WEPopoverTransitionType) {
+    WEPopoverTransitionTypePresent = 0,
+    WEPopoverTransitionTypeDismiss,
+    WEPopoverTransitionTypeReposition
+};
+
+/**
+ Completion block definition.
+ */
 typedef void(^WEPopoverCompletionBlock)(void);
+
+/**
+ Transition block definition.
+ */
+typedef void(^WEPopoverTransitionBlock)(WEPopoverTransitionType transitionType, BOOL animated);
+
 
 /**
  Custom popover controller for iOS, mimicing the iPad UIPopoverController interface. See that class for more details.
@@ -73,10 +105,23 @@ typedef void(^WEPopoverCompletionBlock)(void);
 /**
  The content view controller to display.
  
- If set while presented, use one of the reposition methods to auto-size the popover for the new content.
- Use the method repositionForContentViewController:animated: for setting the contentViewController and repositioning at the same time.
+ If set while the popover is visible, use one of the reposition methods to resize the popover for the new content, this method does not do that (to allow for more control, maybe the popover needs to be repositioned to a new anchor rect).
+ 
+ To crossfade the transition to the new contentViewController use the setContentViewController:animated: method instead.
+ 
+ Use the convenience method repositionForContentViewController:animated: for setting a new contentViewController and repositioning at the same time.
  */
 @property(nonatomic, strong) UIViewController *contentViewController;
+
+/**
+ Returns whether or not the popover is currently presenting (animating to be presented).
+ */
+@property (nonatomic, readonly, getter=isPresenting) BOOL presenting;
+
+/**
+ Returns whether or not the popover is currently dismissing (animating to be dismissed).
+ */
+@property (nonatomic, readonly, getter=isDismissing) BOOL dismissing;
 
 /**
  The view from which the popover was presented.
@@ -174,15 +219,39 @@ typedef void(^WEPopoverCompletionBlock)(void);
 @property(nonatomic, assign) UIEdgeInsets popoverLayoutMargins;
 
 /**
+ Optional transition block for code to be performed when presentation/dismissal/reposition occurs.
+ 
+ This block is executed within a UIView animation block if animated is YES.
+ */
+@property (nonatomic, copy) WEPopoverTransitionBlock transitionBlock;
+
+/**
+ Optional block for code to be performed after the popover has been dismissed.
+ 
+ Use this for example to cleanup state, etc.
+ */
+@property (nonatomic, copy) WEPopoverCompletionBlock afterDismissBlock;
+
+/**
  The default container view properties to be used by the popover.
  */
 + (WEPopoverContainerViewProperties *)defaultContainerViewProperties;
 + (void)setDefaultContainerViewProperties:(WEPopoverContainerViewProperties *)properties;
 
 /**
+ Returns true iff any instance of WEPopoverController is visible.
+ */
++ (BOOL)isAnyPopoverVisible;
+
+/**
  Intializes with the specified content view controller.
  */
 - (id)initWithContentViewController:(UIViewController *)theContentViewController;
+
+/**
+ Sets a new content view controller and optionally animates the transition.
+ */
+- (void)setContentViewController:(UIViewController *)contentViewController animated:(BOOL)animated;
 
 /**
  Dismisses the popover, optionally animating.
@@ -212,6 +281,8 @@ typedef void(^WEPopoverCompletionBlock)(void);
  The completion block is called when done.
  
  The view and rect are used as anchor for automatic reposition during rotation.
+ 
+ This method has no effect is the popover is already visible, being presented or dismissed.
  */
 - (void)presentPopoverFromRect:(CGRect)rect
                         inView:(UIView *)view
@@ -221,6 +292,8 @@ typedef void(^WEPopoverCompletionBlock)(void);
 
 /**
  Presents the popover from the specified bar button item and allowed arrow directions, optionally animating the presentation.
+ 
+ This method has no effect is the popover is already visible, being presented or dismissed.
  */
 - (void)presentPopoverFromBarButtonItem:(UIBarButtonItem *)item
                permittedArrowDirections:(UIPopoverArrowDirection)arrowDirections
@@ -230,6 +303,8 @@ typedef void(^WEPopoverCompletionBlock)(void);
  Presents the popover from the specified bar button item and allowed arrow directions, optionally animating the presentation.
  
  Calls the completion block when done.
+ 
+ This method has no effect is the popover is already visible, being presented or dismissed.
  */
 - (void)presentPopoverFromBarButtonItem:(UIBarButtonItem *)item
                permittedArrowDirections:(UIPopoverArrowDirection)arrowDirections
@@ -240,6 +315,8 @@ typedef void(^WEPopoverCompletionBlock)(void);
  Sets the specified content view controller and repositions at the same time using the current anchor frame/arrow direction, optionally animating the reposition.
  
  For more control, assign the contentViewController and call one of the other reposition methods manually.
+ 
+ This method has no effect if the popover is currently dismissing or hasn't been presented yet.
  */
 - (void)repositionForContentViewController:(UIViewController *)vc animated:(BOOL)animated;
 
@@ -247,6 +324,8 @@ typedef void(^WEPopoverCompletionBlock)(void);
  Repositions the popover to the specified anchor frame (rect relative to view) and obeying the new permitted arrow directions.
  
  The reposition is optionally animated.
+ 
+ This method has no effect if the popover is currently dismissing or hasn't been presented yet.
  */
 - (void)repositionPopoverFromRect:(CGRect)rect
 						   inView:(UIView *)view
@@ -258,6 +337,8 @@ typedef void(^WEPopoverCompletionBlock)(void);
  
  The reposition is optionally animated.
  The completion block is called when done.
+ 
+ This method has no effect if the popover is currently dismissing or hasn't been presented yet.
  */
 - (void)repositionPopoverFromRect:(CGRect)rect
                            inView:(UIView *)view
