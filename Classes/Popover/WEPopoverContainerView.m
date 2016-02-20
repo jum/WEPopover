@@ -13,6 +13,7 @@
 
 @property (nonatomic, strong) UIImageView *arrowImageView;
 @property (nonatomic, strong) UIView *bgView;
+@property (nonatomic, strong) UIView *shadowView;
 @property (nonatomic, strong) UIImageView *bgImageView;
 
 @end
@@ -24,6 +25,7 @@
 - (CGSize)contentSize;
 - (void)setProperties:(WEPopoverContainerViewProperties *)props;
 - (void)initFrame;
+- (CGFloat)shadowInset;
 
 @end
 
@@ -63,6 +65,13 @@ permittedArrowDirections:(UIPopoverArrowDirection)permittedArrowDirections
         self.clipsToBounds = YES;
         self.userInteractionEnabled = YES;
         
+        self.shadowView = [UIView new];
+        self.shadowView.backgroundColor = [UIColor clearColor];
+        self.shadowView.clipsToBounds = NO;
+        self.shadowView.layer.masksToBounds = NO;
+
+        [self addSubview:self.shadowView];
+        
         self.arrowImageView = [[UIImageView alloc] init];
         self.arrowImageView.hidden = YES;
         self.arrowImageView.contentMode = UIViewContentModeCenter;
@@ -89,8 +98,16 @@ permittedArrowDirections:(UIPopoverArrowDirection)permittedArrowDirections
 
         if (_properties.maskCornerRadius > 0.0f) {
             self.bgView.layer.cornerRadius = _properties.maskCornerRadius;
+            self.shadowView.layer.cornerRadius = _properties.maskCornerRadius;
         }
-        
+
+        if (_properties.shadowColor != nil) {
+            self.shadowView.layer.shadowColor = [_properties.shadowColor CGColor];
+            self.shadowView.layer.shadowRadius = _properties.shadowRadius;
+            self.shadowView.layer.shadowOffset = _properties.shadowOffset;
+            self.shadowView.layer.shadowOpacity = _properties.shadowOpacity;
+        }
+
         [self initFrame];
     }
     return self;
@@ -221,6 +238,14 @@ permittedArrowDirections:(UIPopoverArrowDirection)permittedArrowDirections
 
 @implementation WEPopoverContainerView(Private)
 
+- (CGFloat)shadowInset {
+    CGFloat ret = 0.0;
+    if (_properties.shadowColor != nil) {
+        ret = ceil(_properties.shadowRadius);
+    }
+    return ret;
+}
+
 - (void)initFrame {
     CGRect theFrame = CGRectOffset(CGRectUnion(_bgRect, _arrowRect), _offset.x, _offset.y);
     
@@ -228,6 +253,11 @@ permittedArrowDirections:(UIPopoverArrowDirection)permittedArrowDirections
     _arrowOffset = CGPointMake(MAX(0, -_arrowRect.origin.x), MAX(0, -_arrowRect.origin.y));
     _bgRect = CGRectOffset(_bgRect, _arrowOffset.x, _arrowOffset.y);
     _arrowRect = CGRectOffset(_arrowRect, _arrowOffset.x, _arrowOffset.y);
+    
+    CGFloat delta = self.shadowInset;
+    theFrame = CGRectInset(theFrame, -delta, -delta);
+    _bgRect = CGRectOffset(_bgRect, delta, delta);
+    _arrowRect = CGRectOffset(_arrowRect, delta, delta);
     _calculatedFrame = CGRectIntegral(theFrame);
     
     _arrowImageView.hidden = (_arrowImage == nil);
@@ -237,6 +267,7 @@ permittedArrowDirections:(UIPopoverArrowDirection)permittedArrowDirections
     _bgImageView.image = _bgImage;
     _bgImageView.hidden = (_bgImage == nil);
     _bgView.frame = _bgRect;
+    _shadowView.frame = _bgRect;
 }
 
 - (CGSize)contentSize {
@@ -248,6 +279,10 @@ permittedArrowDirections:(UIPopoverArrowDirection)permittedArrowDirections
                              _properties.backgroundMargins.top + _properties.contentMargins.top + _arrowOffset.y,
                              _bgRect.size.width - _properties.backgroundMargins.left - _properties.backgroundMargins.right - _properties.contentMargins.left - _properties.contentMargins.right,
                              _bgRect.size.height - _properties.backgroundMargins.top - _properties.backgroundMargins.bottom - _properties.contentMargins.top - _properties.contentMargins.bottom);
+    
+    CGFloat shadowInset = self.shadowInset;
+    rect = CGRectOffset(rect, shadowInset, shadowInset);
+    
     return rect;
 }
 
@@ -285,7 +320,7 @@ permittedArrowDirections:(UIPopoverArrowDirection)permittedArrowDirections
     while (theArrowDirection <= UIPopoverArrowDirectionRight) {
         
         if ((supportedArrowDirections & theArrowDirection)) {
-            
+
             CGRect theBgRect = CGRectMake(0, 0, theSize.width, theSize.height);
             CGRect theArrowRect = CGRectZero;
             CGPoint theOffset = CGPointZero;

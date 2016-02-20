@@ -9,6 +9,7 @@
 #import "WEPopoverTableViewController.h"
 #import "WEPopoverContentViewController.h"
 #import "WEPopoverViewController.h"
+#import "WECustomPopoverController.h"
 #import "UIBarButtonItem+WEPopover.h"
 
 @implementation WEPopoverTableViewController
@@ -210,11 +211,10 @@
                 WEPopoverController *wePopoverController = (WEPopoverController *)self.popoverController;
                 wePopoverController.animationType = WEPopoverAnimationTypeSlide;
             }
-            
+
             if ([self.popoverController respondsToSelector:@selector(setContainerViewProperties:)]) {
                 [self.popoverController setContainerViewProperties:[self improvedContainerViewProperties]];
             }
-            
             self.popoverController.backgroundColor = [UIColor colorWithWhite:0.0 alpha:0.3];
             
             self.popoverController.delegate = self;
