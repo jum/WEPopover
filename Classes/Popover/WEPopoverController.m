@@ -247,9 +247,21 @@ static void animate(NSTimeInterval duration, void (^animationBlock)(void), void 
 
 - (void)setContentViewController:(UIViewController *)contentViewController animated:(BOOL)animated {
     if (contentViewController != _contentViewController) {
+        UIViewController *oldContentViewController = contentViewController;
+        UIViewController *__weak parentViewController = _parentViewController;
+        if (parentViewController) {
+            [oldContentViewController willMoveToParentViewController:nil];
+            [parentViewController addChildViewController:contentViewController];
+        }
         UIView *newContentView = [contentViewController view];
         if (self.containerView != nil && newContentView != self.containerView.contentView) {
-            [self.containerView setContentView:newContentView withAnimationDuration:(animated ? self.primaryAnimationDuration : 0.0)];
+            [self.containerView setContentView:newContentView withAnimationDuration:(animated ? self.primaryAnimationDuration : 0.0)
+            completion:^ {
+                if (parentViewController) {
+                    [contentViewController didMoveToParentViewController:parentViewController];
+                    [oldContentViewController willMoveToParentViewController:nil];
+                }
+            }];
         }
         _contentViewController = contentViewController;
     }
@@ -345,6 +357,10 @@ static void animate(NSTimeInterval duration, void (^animationBlock)(void), void 
         _backgroundView.fillColor = self.backgroundColor;
         _backgroundView.delegate = self;
         _backgroundView.gestureBlockingEnabled = self.gestureBlockingEnabled;
+
+        if (self.parentViewController != nil) {
+            [self.parentViewController addChildViewController:_contentViewController];
+        }
         
         [keyView addSubview:_backgroundView];
         
@@ -545,6 +561,14 @@ static void animate(NSTimeInterval duration, void (^animationBlock)(void), void 
     return rect;
 }
 
+- (UIView *)parentView {
+    UIView *ret = _parentView;
+    if (ret == nil && _parentViewController != nil) {
+        ret = _parentViewController.view;
+    }
+    return ret;
+}
+
 @end
 
 
@@ -678,6 +702,9 @@ static void animate(NSTimeInterval duration, void (^animationBlock)(void), void 
 }
 
 - (void)removeView {
+    if (self.parentViewController != nil) {
+        [self.contentViewController removeFromParentViewController];
+    }
     [self.containerView removeFromSuperview];
     self.containerView = nil;
     [_backgroundView removeFromSuperview];
